@@ -1,0 +1,401 @@
+/* Alcala Trading Console — neo-brutalist "sticker" theme
+   Warm stone surfaces, stone-50 outlines, yellow accent, hard offset shadows.
+   No external assets. (--cyan is repurposed as the yellow accent.) */
+
+:root {
+  --stone-50: #fafaf9;
+  --stone-800: #292524;
+  --yellow-400: #facc15;
+
+  --bg: #17120e;
+  --bg-2: #1f1813;
+  --panel: #292524;        /* stone-800 card face */
+  --panel-solid: #292524;
+  --border: rgba(250, 250, 249, 0.22);
+  --border-strong: rgba(250, 250, 249, 0.55);
+  --text: #fafaf9;
+  --muted: #b8b0a6;
+  --cyan: #facc15;          /* accent (yellow) — reused everywhere */
+  --cyan-dim: #b8860b;
+  --magenta: #ff4dcd;
+  --violet: #fb923c;        /* warm orange for gradient bars */
+  --green: #2bff88;
+  --red: #ff4d6d;
+  --amber: #ffc24d;
+  --glow-cyan: 3px 3px 0 #000;            /* hard offset, brutalist */
+  --glow-magenta: 3px 3px 0 #000;
+  --radius: 16px;
+  --font: "Rubik", "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+  --mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+}
+
+body {
+  background:
+    radial-gradient(700px 420px at 100% -10%, rgba(250, 204, 21, 0.1), transparent 60%),
+    radial-gradient(600px 500px at -10% 110%, rgba(251, 146, 60, 0.08), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* faint halftone dots */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(250, 250, 249, 0.05) 1.2px, transparent 1.2px);
+  background-size: 16px 16px;
+  z-index: 0;
+}
+
+h1, h2, h3 {
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.mono {
+  font-family: var(--mono);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.up { color: var(--green); }
+.down { color: var(--red); }
+.flat { color: var(--muted); }
+
+a { color: var(--cyan); }
+
+/* ---------- brand ---------- */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand .logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--cyan), var(--violet));
+  border: 2px solid var(--stone-50);
+  box-shadow: 2px 2px 0 #000;
+  position: relative;
+  flex: none;
+}
+.brand .logo::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 3px;
+  border: 2px solid var(--stone-800);
+}
+.brand .name {
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+.brand .name b {
+  background: linear-gradient(90deg, var(--cyan), var(--magenta));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------- panels ---------- */
+.panel {
+  position: relative;
+  background: var(--panel);
+  border: 2px solid var(--stone-50);
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 #000;
+  padding: 18px;
+}
+.panel-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.panel-title::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 14px;
+  margin-right: 8px;
+  border-radius: 2px;
+  background: linear-gradient(var(--cyan), var(--violet));
+  vertical-align: middle;
+}
+
+/* ---------- buttons ---------- */
+/* neo-brutalist: punchy yellow, hard black border + offset shadow */
+.btn {
+  font-family: inherit;
+  background: #fbca1f;
+  color: #0a0a0a;
+  font-weight: 900;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+  padding: 0.6em 1.2em;
+  border: 3px solid #000;
+  border-radius: 0.4em;
+  box-shadow: 0.1em 0.1em 0 #000;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.btn:hover {
+  transform: translate(-0.05em, -0.05em);
+  box-shadow: 0.18em 0.18em 0 #000;
+}
+.btn:active {
+  transform: translate(0.05em, 0.05em);
+  box-shadow: 0.05em 0.05em 0 #000;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0.1em 0.1em 0 #000;
+}
+.btn-primary { background: #fbca1f; }
+.btn-buy { background: #2bff88; color: #062b16; }
+.btn-sell { background: #ff4d6d; color: #2b0610; }
+.btn-ghost { background: #e8f0ff; color: #0a0a0a; }
+.btn-sm { font-size: 12px; padding: 0.45em 0.9em; }
+
+/* ---------- inputs ---------- */
+input, select {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  background: #1c1714;
+  border: 2px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 10px 12px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+input:focus, select:focus {
+  border-color: var(--yellow-400);
+  box-shadow: 3px 3px 0 #000;
+}
+label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.field { margin-bottom: 14px; }
+
+/* ---------- chips / badges ---------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 2px solid var(--border-strong);
+}
+.chip.ai {
+  color: var(--magenta);
+  border-color: rgba(255, 77, 205, 0.6);
+  background: rgba(255, 77, 205, 0.12);
+}
+.chip.manual {
+  color: var(--yellow-400);
+  border-color: rgba(250, 204, 21, 0.6);
+  background: rgba(250, 204, 21, 0.12);
+}
+.chip.buy { color: var(--green); border-color: rgba(43, 255, 136, 0.4); }
+.chip.sell { color: var(--red); border-color: rgba(255, 77, 109, 0.4); }
+.chip.status { color: var(--muted); }
+.chip.status.filled { color: var(--green); border-color: rgba(43,255,136,0.4); }
+.chip.status.canceled, .chip.status.expired, .chip.status.rejected { color: var(--red); }
+.chip.status.new, .chip.status.accepted, .chip.status.pending_new,
+.chip.status.partially_filled { color: var(--amber); border-color: rgba(255,194,77,0.4); }
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot.on { background: var(--green); box-shadow: 0 0 10px var(--green); }
+.dot.off { background: var(--muted); }
+
+/* ---------- toast ---------- */
+.toast {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--panel-solid);
+  border: 2px solid var(--stone-50);
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 4px 4px 0 #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 50;
+  max-width: 80vw;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.err { border-color: var(--red); color: #ffd9e0; }
+.toast.ok { border-color: var(--green); color: #d6ffe7; }
+
+/* ---------- rolling-rock loader ---------- */
+.loader {
+  position: relative;
+  font-size: 16px;
+  width: 5.5em;
+  height: 5.5em;
+}
+.loader:before {
+  content: '';
+  position: absolute;
+  transform: translate(-50%, -50%) rotate(45deg);
+  height: 100%;
+  width: 4px;
+  background: var(--stone-50);
+  left: 50%;
+  top: 50%;
+}
+.loader:after {
+  content: '';
+  position: absolute;
+  left: 0.2em;
+  bottom: 0.18em;
+  width: 1em;
+  height: 1em;
+  background-color: var(--yellow-400);
+  border-radius: 15%;
+  animation: rollingRock 2.5s cubic-bezier(.79, 0, .47, .97) infinite;
+}
+@keyframes rollingRock {
+  0%   { transform: translate(0, -1em) rotate(-45deg); }
+  5%   { transform: translate(0, -1em) rotate(-50deg); }
+  20%  { transform: translate(1em, -2em) rotate(47deg); }
+  25%  { transform: translate(1em, -2em) rotate(45deg); }
+  30%  { transform: translate(1em, -2em) rotate(40deg); }
+  45%  { transform: translate(2em, -3em) rotate(137deg); }
+  50%  { transform: translate(2em, -3em) rotate(135deg); }
+  55%  { transform: translate(2em, -3em) rotate(130deg); }
+  70%  { transform: translate(3em, -4em) rotate(217deg); }
+  75%  { transform: translate(3em, -4em) rotate(220deg); }
+  100% { transform: translate(0, -1em) rotate(-225deg); }
+}
+
+/* ---------- sticker buttons (Buy/Sell etc.) — same family as the tabs ---------- */
+.sticker {
+  --stone-50: #fafaf9;
+  --stone-800: #292524;
+  --yellow-400: #facc15;
+  font-family: inherit;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  position: relative;
+  padding: 1px;
+  transform: translate(-3px, -3px);
+  outline: 2px solid transparent;
+  outline-offset: 4px;
+  border: none;
+  border-radius: 9999px;
+  background-color: var(--stone-800);
+  color: var(--stone-800);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  box-shadow:
+    0.5px 0.5px 0 0 var(--stone-800), 1px 1px 0 0 var(--stone-800),
+    1.5px 1.5px 0 0 var(--stone-800), 2px 2px 0 0 var(--stone-800),
+    2.5px 2.5px 0 0 var(--stone-800), 3px 3px 0 0 var(--stone-800),
+    0 0 0 2px var(--stone-50), 0.5px 0.5px 0 2px var(--stone-50),
+    1px 1px 0 2px var(--stone-50), 1.5px 1.5px 0 2px var(--stone-50),
+    2px 2px 0 2px var(--stone-50), 2.5px 2.5px 0 2px var(--stone-50),
+    3px 3px 0 2px var(--stone-50);
+}
+.sticker:hover { transform: translate(0, 0); box-shadow: 0 0 0 2px var(--stone-50); }
+.sticker:active,
+.sticker:focus-visible { outline-color: var(--yellow-400); }
+.sticker:focus-visible { outline-style: dashed; }
+.sticker:disabled { opacity: 0.5; cursor: not-allowed; transform: translate(-3px, -3px); }
+.sticker > div {
+  position: relative;
+  pointer-events: none;
+  background-color: var(--face, var(--yellow-400));
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.sticker > div::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  opacity: 0.4;
+  background-image:
+    radial-gradient(rgb(255 255 255 / 80%) 20%, transparent 20%),
+    radial-gradient(rgb(255 255 255 / 100%) 20%, transparent 20%);
+  background-position: 0 0, 4px 4px;
+  background-size: 8px 8px;
+  mix-blend-mode: hard-light;
+  animation: dots 0.5s infinite linear;
+}
+.sticker > div > span {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3em;
+  padding: 0.75em 1.1em;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--ink, var(--stone-800));
+  filter: drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.25));
+}
+.sticker-buy { --face: #2bff88; --ink: #06351b; }
+.sticker-sell { --face: #ff4d6d; --ink: #3a0710; }
+@keyframes dots {
+  0% { background-position: 0 0, 4px 4px; }
+  100% { background-position: 8px 0, 12px 4px; }
+}
+
+/* scrollbars */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb {
+  background: rgba(250, 250, 249, 0.22);
+  border-radius: 9px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(250, 250, 249, 0.4); }
