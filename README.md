@@ -59,6 +59,3 @@ risking capital. No real orders are placed.
 - **Why only buy signals?** Selling options has unbounded risk and needs margin modelling;
   we scoped to the bounded-risk long side deliberately.
 
-## Demo safety
-Record a 60-second screen capture of the dashboard running cleanly as a backup,
-in case the WiFi drops mid-presentation.
