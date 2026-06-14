@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Alcala Console · Accounts</title>
+    <link rel="stylesheet" href="theme.css" />
+    <style>
+      body { display: flex; justify-content: center; padding: 44px 20px; }
+      .wrap { width: 100%; max-width: 640px; position: relative; z-index: 1; }
+      header { margin-bottom: 24px; }
+      header p { color: var(--muted); margin: 10px 0 0; font-size: 14px; line-height: 1.5; }
+      .acct-card { margin-bottom: 18px; }
+      .acct-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+      .badge {
+        width: 34px; height: 34px; border-radius: 10px; flex: none;
+        display: grid; place-items: center;
+        font-family: var(--mono); font-weight: 800; font-size: 13px; color: #1a1714;
+        border: 2px solid var(--stone-50); box-shadow: 2px 2px 0 #000;
+      }
+      .badge.alpaca { background: linear-gradient(135deg, #facc15, #fb923c); }
+      .badge.ibkr { background: linear-gradient(135deg, #ff5a5f, #d4232a); color: #fff; }
+      .badge.deribit { background: linear-gradient(135deg, #34d399, #059669); color: #04231a; }
+      .acct-head .t { font-weight: 800; font-size: 15px; }
+      .acct-head .s { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+      .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      .steps { margin: 0; padding-left: 18px; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+      .steps code { font-family: var(--mono); color: var(--yellow-400); }
+      .actions { display: flex; gap: 12px; margin-top: 6px; align-items: center; }
+      .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="brand">
+          <div class="logo"></div>
+          <div class="name">Alcala <b>Accounts</b></div>
+        </div>
+        <p>
+          Connect one or more brokerage accounts. Credentials are stored locally
+          in this browser. Switch between accounts from the badge in the top-left
+          of the console.
+        </p>
+      </header>
+
+      <!-- Alpaca -->
+      <div class="panel acct-card">
+        <div class="acct-head">
+          <div class="badge alpaca">A</div>
+          <div>
+            <div class="t">Alpaca</div>
+            <div class="s">Cloud API · key + secret</div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="al_label">Account label</label>
+          <input id="al_label" type="text" placeholder="Alpaca Paper" />
+        </div>
+        <div class="field">
+          <label for="al_key">API Key ID</label>
+          <input id="al_key" type="text" placeholder="PKXXXXXXXXXXXXXXXXXX" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="al_secret">API Secret Key</label>
+          <input id="al_secret" type="password" placeholder="••••••••••••••••••••" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field" style="max-width: 280px">
+          <label for="al_env">Environment</label>
+          <select id="al_env">
+            <option value="paper">Paper (paper-api.alpaca.markets)</option>
+            <option value="live">Live (api.alpaca.markets)</option>
+          </select>
+          <div class="hint">Paper keys (PK…) ↔ Paper, live keys (AK…) ↔ Live.</div>
+        </div>
+      </div>
+
+      <!-- IBKR -->
+      <div class="panel acct-card">
+        <div class="acct-head">
+          <div class="badge ibkr">IB</div>
+          <div>
+            <div class="t">Interactive Brokers</div>
+            <div class="s">Live via TWS + local bridge</div>
+          </div>
+        </div>
+        <ol class="steps" style="margin-bottom: 14px">
+          <li>In TWS: <b>Global Configuration → API → Settings</b> → enable "ActiveX and Socket Clients", port <code>7497</code> (paper), add <code>127.0.0.1</code> to Trusted IPs.</li>
+          <li>Run the bridge: <code>pip install ib_insync aiohttp</code> then <code>python ib_bridge.py</code>.</li>
+          <li>Keep TWS logged in and running while you trade.</li>
+        </ol>
+        <div class="field">
+          <label for="ib_label">Account label</label>
+          <input id="ib_label" type="text" placeholder="IBKR · TWS" />
+        </div>
+        <div class="field" style="max-width: 360px">
+          <label for="ib_url">Bridge URL</label>
+          <input id="ib_url" type="text" placeholder="http://127.0.0.1:8788" spellcheck="false" />
+        </div>
+      </div>
+
+      <!-- Deribit -->
+      <div class="panel acct-card">
+        <div class="acct-head">
+          <div class="badge deribit">V</div>
+          <div>
+            <div class="t">VOLARB</div>
+            <div class="s">Deribit · simulated · live data + AI engine</div>
+          </div>
+        </div>
+        <ol class="steps" style="margin-bottom: 14px">
+          <li>The vol-arb engine paper-trades BTC options on <b>real live Deribit data</b> — no real orders, no keys needed.</li>
+          <li>Run it: <code>pip install -r engine/Hackathon-NSM-FY26/requirements.txt aiohttp</code> then <code>python deribit_bridge.py</code>.</li>
+          <li>Connect from the console — balance, positions, the AI's trades, and live P&amp;L are all simulated off real prices.</li>
+        </ol>
+        <div class="field">
+          <label for="db_label">Account label</label>
+          <input id="db_label" type="text" placeholder="VOLARB" />
+        </div>
+        <div class="field" style="max-width: 360px; margin-bottom: 0">
+          <label for="db_url">Bridge URL</label>
+          <input id="db_url" type="text" placeholder="http://127.0.0.1:8789" spellcheck="false" />
+        </div>
+      </div>
+
+      <!-- shared -->
+      <div class="panel acct-card">
+        <div class="field" style="max-width: 280px; margin-bottom: 0">
+          <label for="aiPrefix">AI order tag prefix</label>
+          <input id="aiPrefix" type="text" placeholder="ai" value="ai" />
+          <div class="hint">Orders whose client_order_id / orderRef starts with this show as 🤖 AI.</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="save">Save accounts</button>
+        <span id="saved" class="muted" style="font-size: 13px"></span>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <script type="module" src="setup.js"></script>
+  </body>
+</html>
