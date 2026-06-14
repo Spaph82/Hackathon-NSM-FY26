@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VOLARB — BTC Options Volatility Desk</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#0A0F16; --panel:#10171F; --panel2:#0D131A; --hair:#1D2A37;
+    --text:#E8EEF4; --muted:#76889A; --faint:#4A5A6B;
+    --market:#E8A13A;      /* amber = the market */
+    --ai:#37C7D8;          /* cyan  = our AI fair value */
+    --profit:#3FC79A; --loss:#E5566D; --gold:#CBAE63;
+    --mono:ui-monospace,"Cascadia Code","Consolas","SF Mono",monospace;
+    --sans:"Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--ink);color:var(--text);font-family:var(--sans);
+    font-size:14px;line-height:1.4;padding:18px 20px;overflow-x:hidden;
+    background-image:radial-gradient(circle at 20% -10%,#10202c 0%,var(--ink) 55%);}
+  .hgroup{flex-shrink:0}
+  .eyebrow{font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--muted);font-weight:600}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  /* header */
+  header{display:flex;align-items:center;justify-content:space-between;
+    padding-bottom:14px;border-bottom:1px solid var(--hair);margin-bottom:16px}
+  .brand{display:flex;align-items:baseline;gap:10px}
+  .brand h1{font-size:15px;letter-spacing:.28em;font-weight:700}
+  .brand .tag{font-size:10px;letter-spacing:.18em;color:var(--gold);text-transform:uppercase}
+  .hgroup{display:flex;align-items:center;gap:26px}
+  .spot{font-family:var(--mono);font-size:26px;font-weight:600;letter-spacing:.01em}
+  .spot .lbl{display:block;font-size:9px;letter-spacing:.2em;color:var(--muted);
+    text-transform:uppercase;font-family:var(--sans);margin-bottom:2px}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:11px;
+    letter-spacing:.12em;text-transform:uppercase;padding:5px 11px;border-radius:2px;
+    border:1px solid var(--hair);color:var(--muted)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+  .pill.live{color:var(--profit);border-color:rgba(63,199,154,.35)}
+  .pill.live .dot{background:var(--profit);box-shadow:0 0 8px var(--profit);
+    animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .clock{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+  /* kpi strip */
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+  .kpi{background:var(--panel);border:1px solid var(--hair);border-radius:3px;
+    padding:12px 14px;position:relative;overflow:hidden}
+  .kpi .eyebrow{margin-bottom:8px}
+  .kpi .v{font-family:var(--mono);font-size:21px;font-weight:600;font-variant-numeric:tabular-nums}
+  .kpi .sub{font-size:10px;color:var(--faint);margin-top:3px;font-family:var(--mono)}
+  .kpi.accent::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--gold)}
+
+  /* layout */
+  .grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px}
+  .panel{background:var(--panel);border:1px solid var(--hair);border-radius:3px;padding:15px}
+  .panel .head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .legend{display:flex;gap:14px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+  .legend i{display:inline-block;width:9px;height:3px;margin-right:5px;vertical-align:middle}
+  .chartbox{position:relative;height:230px}
+  .chartbox.sm{height:150px}
+  .stack{display:flex;flex-direction:column;gap:14px}
+
+  /* risk readout */
+  .risk{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .risk .cell{background:var(--panel2);border:1px solid var(--hair);border-radius:3px;padding:12px}
+  .risk .v{font-family:var(--mono);font-size:22px;font-weight:600}
+  .neutral{color:var(--profit)} .warn{color:var(--gold)}
+  .note{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5}
+
+  /* tables / feed */
+  .lower{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{text-align:left;font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;padding:7px 8px;border-bottom:1px solid var(--hair)}
+  td{padding:7px 8px;border-bottom:1px solid rgba(29,42,55,.5);font-family:var(--mono);
+    font-variant-numeric:tabular-nums}
+  .tag{font-family:var(--sans);font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+    padding:2px 6px;border-radius:2px;border:1px solid var(--hair);color:var(--muted)}
+  .tag.c{color:var(--ai);border-color:rgba(55,199,216,.3)}
+  .tag.p{color:var(--market);border-color:rgba(232,161,58,.3)}
+  .pos{color:var(--profit)} .neg{color:var(--loss)}
+  .feed{max-height:230px;overflow-y:auto}
+  .feed tr td:first-child{color:var(--gold)}
+  .empty{color:var(--faint);font-size:12px;padding:24px 8px;text-align:center;font-family:var(--sans)}
+  .footnote{margin-top:16px;font-size:10px;color:var(--faint);text-align:center;letter-spacing:.04em}
+  @media(max-width:1000px){.grid,.lower,.kpis{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>VOLARB</h1>
+    <span class="tag">BTC Options · Volatility Desk</span>
+  </div>
+  <div class="hgroup">
+    <div class="spot"><span class="lbl">BTC Spot</span><span id="spot" class="num">—</span></div>
+    <span id="conn" class="pill"><span class="dot"></span><span id="connT">connecting</span></span>
+    <span id="clock" class="clock">--:--:--</span>
+  </div>
+</header>
+
+<div class="kpis">
+  <div class="kpi accent"><div class="eyebrow">Arbitrage P&amp;L</div><div class="v" id="pnl">—</div><div class="sub">real · mark-to-mid · frictionless</div></div>
+  <div class="kpi"><div class="eyebrow">BTC Hedged</div><div class="v" id="hedged" style="color:var(--gold)">—</div><div class="sub" id="rebs">short position</div></div>
+  <div class="kpi"><div class="eyebrow">Net Delta</div><div class="v" id="ndelta">—</div><div class="sub">after hedge · neutral</div></div>
+  <div class="kpi"><div class="eyebrow">Net Vega</div><div class="v" id="nvega">—</div><div class="sub">vol exposure</div></div>
+  <div class="kpi"><div class="eyebrow">Model MAE</div><div class="v" id="mae" style="color:var(--ai)">—</div><div class="sub" id="maeSub">vs baseline —</div></div>
+  <div class="kpi"><div class="eyebrow">Open / Closed</div><div class="v" id="oc">0 / 0</div><div class="sub">positions</div></div>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <div class="head">
+      <span class="eyebrow">Market ask price vs theoretical (AI) price — <span id="focusName" style="color:var(--gold)">focus contract</span></span>
+      <span class="legend">
+        <span><i style="background:var(--market)"></i>Market ask</span>
+        <span><i style="background:var(--ai)"></i>Theoretical (AI)</span>
+      </span>
+    </div>
+    <div class="chartbox"><canvas id="gapChart"></canvas></div>
+    <div class="note">The shaded band is the gap our model sees between the market price and its theoretical fair value — the detected mispricing.</div>
+  </div>
+  <div class="stack">
+    <div class="panel">
+      <div class="head"><span class="eyebrow">Arbitrage P&amp;L — real, mark-to-mid (frictionless)</span></div>
+      <div class="chartbox sm"><canvas id="pnlChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="head"><span class="eyebrow">Portfolio risk</span></div>
+      <div class="risk">
+        <div class="cell"><div class="eyebrow">Net Delta (Δ)</div><div class="v" id="ndelta2">—</div></div>
+        <div class="cell"><div class="eyebrow">Net Vega (ν)</div><div class="v" id="nvega2">—</div></div>
+      </div>
+      <div class="note">Each long option is hedged with a short BTC position. Net Delta near zero means the book is market-neutral — we harvest volatility, not direction.</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <div class="head"><span class="eyebrow">BTC spot — live</span></div>
+    <div class="chartbox sm"><canvas id="spotChart"></canvas></div>
+  </div>
+  <div class="panel">
+    <div class="head"><span class="eyebrow">Forecast accuracy</span></div>
+    <div class="risk">
+      <div class="cell"><div class="eyebrow">Our model</div><div class="v" id="maeA" style="color:var(--ai)">—</div></div>
+      <div class="cell"><div class="eyebrow">Naive baseline</div><div class="v" id="maeB" style="color:var(--muted)">—</div></div>
+    </div>
+    <div class="note" id="accNote">Mean absolute error of predicted implied volatility. The honest test is whether our model beats a naive "no-change" baseline.</div>
+  </div>
+</div>
+
+<div class="lower">
+  <div class="panel">
+    <div class="head"><span class="eyebrow">Open positions — paper</span></div>
+    <table><thead><tr><th>Contract</th><th>Strike</th><th>Hedge BTC</th><th>Option leg</th><th>P&amp;L</th></tr></thead>
+    <tbody id="posBody"><tr><td colspan="5" class="empty">No open positions yet — waiting for a flagged mispricing.</td></tr></tbody></table>
+  </div>
+  <div class="panel">
+    <div class="head"><span class="eyebrow">Signal feed</span></div>
+    <div class="feed"><table><thead><tr><th>Time</th><th>Contract</th><th>Mkt</th><th>AI fair</th><th>Edge</th></tr></thead>
+    <tbody id="feedBody"><tr><td colspan="5" class="empty">Scanning the order book for mispricings…</td></tr></tbody></table></div>
+  </div>
+</div>
+
+<div class="footnote">Live Deribit market data · real P&amp;L marked to market mid · only spread &amp; fees removed · continuous hedging · simulated, no real orders · iFX Hack 2026</div>
+
+<script>
+const f0=(n)=>n==null?"—":Number(n).toFixed(0);
+const f2=(n)=>n==null?"—":Number(n).toFixed(2);
+const usd=(n)=>n==null?"—":(n<0?"-$":"$")+Math.abs(n).toLocaleString(undefined,{maximumFractionDigits:0});
+const usd2=(n)=>n==null?"—":(n<0?"-$":"$")+Math.abs(n).toFixed(2);
+
+let gapChart,pnlChart,spotChart;
+function mk(ctx,cfg){return new Chart(ctx,cfg);}
+const baseOpts=(yfmt)=>({responsive:true,maintainAspectRatio:false,animation:false,
+  interaction:{intersect:false,mode:"index"},
+  plugins:{legend:{display:false},tooltip:{enabled:true,backgroundColor:"#0D131A",borderColor:"#1D2A37",borderWidth:1,titleColor:"#76889A",bodyColor:"#E8EEF4",titleFont:{family:"monospace"},bodyFont:{family:"monospace"}}},
+  scales:{x:{display:false,grid:{display:false}},
+    y:{position:"right",grid:{color:"rgba(29,42,55,.45)"},border:{display:false},
+       ticks:{color:"#4A5A6B",font:{family:"monospace",size:10},callback:yfmt}}}});
+
+function initCharts(){
+  if(!window.Chart)return;
+  gapChart=mk(document.getElementById("gapChart"),{type:"line",
+    data:{labels:[],datasets:[
+      {label:"Market",data:[],borderColor:"#E8A13A",backgroundColor:"#E8A13A",borderWidth:1.6,pointRadius:0,tension:.25,fill:false},
+      {label:"AI fair",data:[],borderColor:"#37C7D8",backgroundColor:"rgba(55,199,216,.10)",borderWidth:1.6,pointRadius:0,tension:.25,fill:"-1"}
+    ]},options:baseOpts(v=>"$"+v.toFixed(0))});
+  pnlChart=mk(document.getElementById("pnlChart"),{type:"line",
+    data:{labels:[],datasets:[
+      {label:"P&L",data:[],borderColor:"#3FC79A",backgroundColor:"rgba(63,199,154,.10)",borderWidth:1.8,pointRadius:0,tension:.2,fill:"origin"}
+    ]},options:baseOpts(v=>"$"+v.toFixed(0))});
+  spotChart=mk(document.getElementById("spotChart"),{type:"line",
+    data:{labels:[],datasets:[
+      {label:"BTC",data:[],borderColor:"#CBAE63",backgroundColor:"rgba(203,174,99,.08)",borderWidth:1.6,pointRadius:0,tension:.25,fill:"origin"}
+    ]},options:baseOpts(v=>"$"+(v/1000).toFixed(1)+"k")});
+}
+function setLine(ch,i,labels,data){if(!ch)return;ch.data.labels=labels;ch.data.datasets[i].data=data;}
+
+async function tick(){
+  let s;
+  try{ s=await (await fetch("/state",{cache:"no-store"})).json(); }
+  catch(e){ document.getElementById("connT").textContent="engine offline"; return; }
+
+  // connection
+  const conn=document.getElementById("conn");
+  if(s.connected){conn.classList.add("live");document.getElementById("connT").textContent="live";}
+  else{conn.classList.remove("live");document.getElementById("connT").textContent="connecting";}
+  document.getElementById("spot").textContent=s.spot?usd(s.spot):"—";
+
+  // portfolio kpis
+  const p=s.portfolio||{};
+  const pnl=p.total_pnl;
+  const pe=document.getElementById("pnl");
+  pe.textContent=usd2(pnl); pe.className="v "+(pnl>=0?"pos":"neg");
+  document.getElementById("hedged").textContent=(p.gross_hedge!=null?f2(p.gross_hedge)+" ฿":"—");
+  document.getElementById("rebs").textContent=(p.rebalances!=null?p.rebalances+" rebalances":"short position");
+  const nd=p.net_delta, nv=p.net_vega;
+  const ndTxt=nd==null?"—":(nd>=0?"+":"")+f2(nd);
+  document.getElementById("ndelta").textContent=ndTxt;
+  document.getElementById("ndelta2").textContent=ndTxt;
+  document.getElementById("ndelta").className="v "+(Math.abs(nd||0)<0.15?"neutral":"warn");
+  document.getElementById("ndelta2").className="v "+(Math.abs(nd||0)<0.15?"neutral":"warn");
+  document.getElementById("nvega").textContent=nv==null?"—":f0(nv);
+  document.getElementById("nvega2").textContent=nv==null?"—":f0(nv);
+  document.getElementById("oc").textContent=(p.open_positions?p.open_positions.length:0)+" / "+(p.closed||0);
+
+  // model accuracy
+  const mae=s.model_mae, base=s.baseline_mae;
+  document.getElementById("mae").textContent=mae==null?"training…":f2(mae);
+  document.getElementById("maeA").textContent=mae==null?"training…":f2(mae);
+  document.getElementById("maeB").textContent=base==null?"—":f2(base);
+  if(mae!=null&&base!=null){
+    const beats=mae<base;
+    document.getElementById("maeSub").textContent=(beats?"beats":"under")+" baseline "+f2(base);
+    document.getElementById("accNote").textContent=beats
+      ? "Our model is currently beating the naive no-change baseline — early evidence of real predictive signal."
+      : "Our model is not yet beating the naive baseline — short-horizon IV is highly persistent, so this is the honest, expected hard case.";
+  }
+
+  // charts
+  if(window.Chart&&gapChart){
+    const fh=s.focus_hist||[];
+    const lab=fh.map(r=>new Date(r[0]*1000).toLocaleTimeString());
+    setLine(gapChart,0,lab,fh.map(r=>r[1]));
+    setLine(gapChart,1,lab,fh.map(r=>r[2]));
+    gapChart.update("none");
+    document.getElementById("focusName").textContent=s.focus_instr||"focus contract";
+
+    const ph=s.pnl_hist||[];
+    const plab=ph.map(r=>new Date(r[0]*1000).toLocaleTimeString());
+    setLine(pnlChart,0,plab,ph.map(r=>r[1]));   // real mark-to-mid P&L
+    pnlChart.update("none");
+
+    const sh=s.spot_hist||[];
+    setLine(spotChart,0,sh.map(r=>""),sh.map(r=>r[1]));
+    spotChart.update("none");
+  }
+
+  // positions
+  const pb=document.getElementById("posBody");
+  if(p.open_positions&&p.open_positions.length){
+    pb.innerHTML=p.open_positions.map(o=>{
+      const t=o.type==="call"?'<span class="tag c">CALL</span>':'<span class="tag p">PUT</span>';
+      return `<tr><td>${t} ${o.instrument.split("-").slice(1,2)}</td><td>${f0(o.strike)}</td>
+        <td>${f2(o.hedge_btc)}</td>
+        <td class="${o.option_leg>=0?'pos':'neg'}">${usd2(o.option_leg)}</td>
+        <td class="${o.pnl>=0?'pos':'neg'}">${usd2(o.pnl)}</td></tr>`;}).join("");
+  }else pb.innerHTML='<tr><td colspan="5" class="empty">No open positions yet — waiting for a flagged mispricing.</td></tr>';
+
+  // feed
+  const fb=document.getElementById("feedBody");
+  if(s.opportunities&&s.opportunities.length){
+    fb.innerHTML=s.opportunities.slice(0,12).map(o=>{
+      const t=o.type==="call"?'<span class="tag c">C</span>':'<span class="tag p">P</span>';
+      return `<tr><td>${o.t}</td><td>${t} ${f0(o.strike)}</td><td>${usd2(o.market_ask)}</td>
+        <td style="color:var(--ai)">${usd2(o.theo)}</td>
+        <td class="pos">+${usd2(o.edge)}</td></tr>`;}).join("");
+  }else fb.innerHTML='<tr><td colspan="5" class="empty">Scanning the order book for mispricings…</td></tr>';
+}
+
+setInterval(()=>{document.getElementById("clock").textContent=new Date().toLocaleTimeString();},1000);
+window.addEventListener("load",()=>{initCharts();tick();setInterval(tick,1500);});
+</script>
+</body>
+</html>

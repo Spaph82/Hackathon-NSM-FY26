@@ -1,0 +1,17 @@
+{
+  "contracts": [
+    "BTC-26JUN26-64000-C",
+    "BTC-26JUN26-64000-P",
+    "BTC-26JUN26-65000-C",
+    "BTC-26JUN26-65000-P",
+    "BTC-26JUN26-63000-C",
+    "BTC-26JUN26-63000-P"
+  ],
+  "spot": 64497.48,
+  "days": 1,
+  "resolution": "1",
+  "start_ms": 1781303513477,
+  "end_ms": 1781389913477,
+  "fetched_at": "2026-06-13T22:31:56.218623+00:00",
+  "perp": "BTC-PERPETUAL"
+}
