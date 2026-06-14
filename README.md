@@ -28,7 +28,7 @@ Live Deribit data  ->  Back out market IV  ->  ML forecasts volatility  ->  Blac
 2. **Back out** each option's implied volatility from its live price (bisection).
 3. **Forecast** near-future volatility with a streaming **Ridge** model that trains live on the market and grades itself against a naive baseline.
 4. **Price** the option with Black-Scholes using the forecast volatility -> a theoretical fair value.
-5. **Flag** the gap between market price and fair value — the detected mispricing.
+5. **Flag** the gap between market price and fair value - the detected mispricing.
 6. **Illustrate** how it would be traded: buy the cheap option, short BTC to stay delta-neutral, and rebalance the hedge as the market moves.
 
 ---
