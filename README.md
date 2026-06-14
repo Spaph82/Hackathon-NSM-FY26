@@ -1,61 +1,182 @@
-# VOLARB — BTC Options Volatility Desk (iFX Hack 2026)
+# VOLARB - AI Volatility Arbitrage on Live Crypto Options
 
-Live volatility-arbitrage engine + paper-trading bot + dashboard.
-Real Deribit market data · simulated (paper) execution · no real orders.
+> Detecting options mispricings in real time by fusing **Black-Scholes** with a **streaming machine-learning** volatility forecaster on live Bitcoin options.
 
-## Setup (once, at the venue)
+**Live Deribit market data · simulated (paper) execution · no real orders are ever placed.**
+
+Built for **iFX Hack 2026**.
+
+---
+
+## What it is
+
+VOLARB is a real-time engine that watches live Bitcoin options, works out the volatility the market is implying for each one, uses a machine-learning model to forecast where that volatility is heading, prices every option with Black-Scholes, and flags the gaps the mispricings.
+
+It ships with a polished live dashboard and a 7-day backtest, and it includes an **illustrative** delta-hedging layer so you can see how a detected mispricing would be traded.
+
+**The core goal is detection** identifying volatility mispricings on live data. The hedging/P&L layer exists to make the concept tangible, **not** to present a guaranteed money-maker. We're explicit about that throughout.
+
+---
+
+## How it works
+
+```
+Live Deribit data  ->  Back out market IV  ->  ML forecasts volatility  ->  Black-Scholes fair value  ->  Flag the mispricing
+```
+
+1. **Connect** to Deribit's public production WebSocket (real live BTC options + spot).
+2. **Back out** each option's implied volatility from its live price (bisection).
+3. **Forecast** near-future volatility with a streaming **Ridge** model that trains live on the market and grades itself against a naive baseline.
+4. **Price** the option with Black-Scholes using the forecast volatility -> a theoretical fair value.
+5. **Flag** the gap between market price and fair value — the detected mispricing.
+6. **Illustrate** how it would be traded: buy the cheap option, short BTC to stay delta-neutral, and rebalance the hedge as the market moves.
+
+---
+
+## Features
+
+- **Real live data** — connects to Deribit's production WebSocket; nothing simulated on the data side.
+- **Real quant math** — Black-Scholes pricing, implied-volatility back-solving, and the Greeks (Delta, Vega).
+- **Genuine streaming ML** — a `Ridge` model that retrains on live data and reports its accuracy against a no-change baseline.
+- **Self-serving dashboard** — the engine runs its own web server; just open a browser. No extra setup.
+- **Illustrative paper-trading layer** — delta-hedged, market-neutral, frictionless by default (fees modelled and toggleable).
+- **7-day backtest** — replays the full engine over a week of real historical data.
+
+---
+
+## Tech stack
+
+Python · `scikit-learn` (Ridge) · `scipy` / `numpy` (Black-Scholes, IV) · `websockets` (live feed) · `requests` (REST / history) · built-in `http.server` (dashboard) · vanilla HTML + Chart.js (front end).
+
+---
+
+## Installation
+
 ```bash
 pip install -r requirements.txt
 ```
-No extra setup for the dashboard — the engine serves it itself.
 
-## Run (this is the whole demo)
+`requirements.txt`:
+
+```
+numpy
+scipy
+scikit-learn
+websockets
+requests
+```
+
+The dashboard needs no extra setup — the engine serves it.
+
+---
+
+## Usage
+
+### 1. Run the live engine + dashboard
+
 ```bash
 python engine.py
 ```
-Then open a browser to:  **http://localhost:8765**
 
-The terminal keeps streaming `[TICK]`/`[ARB]` lines (proof it's real);
-the browser shows the polished live dashboard for the judges.
+Then open **http://localhost:8765** in a browser.
 
-If it can't connect to Deribit, the venue WiFi may block the WebSocket —
-switch to a phone hotspot. TEST THIS EARLY.
+- The **terminal** streams `[TICK]` / `[ARB]` lines — proof it's processing real data live.
+- The **browser** shows the polished dashboard for presentation.
+
+> If it can't connect to Deribit, the venue/network may block the WebSocket — switch to a phone hotspot and test early.
+
+### 2. Run the 7-day backtest
+
+```bash
+python backtest.py
+```
+
+Replays the engine over a week of real Deribit history and writes **`backtest_result.html`** (open it in a browser). Resolution and window are configurable at the top of the file (`RESOLUTION`, `DAYS`).
+
+---
 
 ## What's on the dashboard
-- BTC spot + live connection status
-- Paper P&L, fees paid, net Delta, net Vega, model accuracy, open/closed positions
-- Market price vs AI fair value, with the gap shaded (the detected mispricing)
-- Paper P&L curve vs cumulative fees (the honest fee-drag story)
-- Forecast accuracy: our model's error vs a naive "no-change" baseline
-- Open paper positions + the live signal feed
 
-## What the paper-trading layer does (say this honestly)
-On every flagged-cheap option it: buys it (paper), shorts the right amount of
-BTC to go delta-neutral, rebalances the hedge as BTC moves, and charges a
-realistic fee (0.05% of notional) on every rebalance. It is SIMULATED execution
-on REAL prices — paper trading, the way a desk validates a strategy before
-risking capital. No real orders are placed.
+- **BTC spot** + live connection status
+- **Arbitrage P&L** — real, marked to the market mid, frictionless
+- **BTC Hedged** — the actual (non-zero) short position; **Net Delta** ~ 0 confirms market-neutrality
+- **Net Vega** — volatility exposure
+- **Model accuracy** — our forecast error (MAE) vs a naive no-change baseline
+- **Market ask vs theoretical price** — the gap is the detected mispricing
+- **Live signal feed** + **open positions**
 
-## The honest pitch (your edge with this audience)
-> "We connect live to Deribit, back out the volatility the market implies for
-> every BTC option, and our ML model — training in real time — forecasts where
-> vol is heading. Black-Scholes turns that into a fair value; the shaded gap on
-> screen is the mispricing we detect. We paper-trade it: buy the cheap option,
-> hedge out the direction, harvest the movement — and we show the fees eating
-> into P&L, because that's the real tension in volatility trading.
-> We stay market-neutral [point at net Delta]. We're honest that profitability
-> depends on beating the market's vol forecast, which is the hard part — so we
-> measure our model against a naive baseline rather than claiming an edge we
-> haven't proven."
+---
 
-## Anticipated judge questions — short answers
+## The illustrative hedging layer (how to describe it honestly)
+
+When the engine flags an option as cheap, the paper layer:
+
+1. **Buys** the option (simulated, entered at the mid price).
+2. **Shorts** the right amount of BTC (= the option's Delta) to go market-neutral.
+3. **Rebalances** that hedge continuously as BTC moves — harvesting the movement.
+4. Tracks a **real, mark-to-mid P&L**.
+
+By default this runs **frictionless** (zero fees, mid-price marking) to isolate the pure concept. Fees are fully modelled in the code (`FEE_RATE`) and can be switched on with one parameter — in reality, fees and spread are the main constraint.
+
+**It is simulated execution on real prices — paper trading, the way a desk validates a strategy before risking capital. No real orders are placed.**
+
+---
+
+## Results — 7-day backtest (1-minute resolution)
+
+Replayed over a full week of real Deribit data:
+
+| Metric | Value |
+|---|---|
+| Hedged P&L (illustrative, frictionless) | **+$367** |
+| In profit | **~91% of the week** (peak ~ +$1.9k) |
+| Market-neutral | Net Delta ~ 0.008 |
+| Hedge rebalances | 1,454 |
+| Forecast MAE vs baseline | 0.034 vs 0.032 |
+
+**Honest reading:** the strategy was profitable and market-neutral across a real week — but at a **1-minute horizon the forecast roughly matches the naive baseline**, because volatility barely moves minute-to-minute (the baseline is near-optimal at short horizons). The result is a **feasibility replay on real data, not a profit guarantee.** Our live engine runs far finer than any backtest, so we treat these as illustrations of the concept, not precise accuracy verdicts.
+
+---
+
+## What it is — and isn't
+
+- **Not "true" arbitrage.** True arbitrage is riskless; ours depends on a *prediction* (our volatility forecast). Precisely, it's **statistical / volatility arbitrage** — a relative-value strategy.
+- **Detection, not a money machine.** The engine's job is to identify mispricings on live data. Turning that into reliable profit requires beating the market's volatility forecast and surviving transaction costs — the genuinely hard part.
+- **Frictionless view by design.** The default dashboard / backtest strip out fees and spread to show the concept cleanly; fees are modelled and one toggle away.
+
+---
+
+## Roadmap
+
+- **Sharper forecaster** — a GARCH model, purpose-built for volatility clustering.
+- **Transaction-cost modelling** — fees, spread, and slippage in the live P&L.
+- **Optimal hedge frequency** — the fee-vs-tracking trade-off as a tunable parameter.
+- **Forecast horizon study** — pinning down where the model genuinely beats the baseline.
+
+---
+
+## Repository structure
+
+```
+engine.py            # live engine: data, IV, ML, Black-Scholes, hedging, web server
+dashboard.html       # self-contained live dashboard (served by engine.py)
+backtest.py          # 7-day historical replay -> backtest_result.html
+requirements.txt
+README.md
+```
+
+---
+
+## Anticipated questions
+
 - **Is it real or a sandbox?** Real live Deribit data; execution is simulated (paper).
-- **Would it make money?** Not as a weekend build — the edge (beating market vol) is
-  unproven and fees are a serious drag. It's the detection front-end of a real strategy.
-- **Why not deep learning?** Complex models overfit on crypto's limited data; a simple
-  model + good features is the documented right call. GARCH is our next step.
-- **Is your accuracy real?** We compare against a naive no-change baseline — short-horizon
-  IV is very persistent, so beating it is the honest hard test.
-- **Why only buy signals?** Selling options has unbounded risk and needs margin modelling;
-  we scoped to the bounded-risk long side deliberately.
+- **Would it make money?** Not as a weekend build — the edge (beating the market's vol forecast) is unproven and fees are a real drag. It's the detection front-end of a real strategy.
+- **Why not deep learning?** Complex models overfit on crypto's limited data; a simple, regularized model plus good features is the documented right call. GARCH is the next step.
+- **Is your accuracy real?** We measure against a naive no-change baseline. Short-horizon IV is highly persistent, so beating the baseline is genuinely hard — we report it honestly rather than overclaiming.
+- **Why only buy signals?** Selling options carries unbounded risk and needs margin modelling; we deliberately scoped to the bounded-risk long side.
 
+---
+
+## Disclaimer
+
+This project is for research, education, and demonstration. It is **not** financial advice and is **not** connected to any live trading account. No real orders are placed. Markets are risky; do your own research.
