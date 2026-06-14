@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Alcala Console</title>
+    <link rel="stylesheet" href="theme.css" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- header -->
+      <header class="bar">
+        <div class="switch-wrap">
+          <button class="acct-switch" id="acctSwitch" aria-haspopup="true">
+            <span class="acct-badge badge-alpaca" id="acctBadge">A</span>
+            <span class="acct-meta">
+              <span class="eyebrow">ALCALA</span>
+              <span class="acct-name"><span id="acctName">—</span><span class="chev">▾</span></span>
+            </span>
+          </button>
+
+          <nav class="acct-menu" id="acctMenu">
+            <div class="acct-menu-title">Accounts</div>
+            <ul id="acctList"></ul>
+            <hr />
+            <ul>
+              <li>
+                <button id="mManage">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                  <span>Manage accounts</span>
+                </button>
+              </li>
+              <li>
+                <button id="mDisconnect" class="danger">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+                  <span>Disconnect</span>
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+        <div class="bar-right">
+          <span class="status"><span class="dot off" id="dot"></span><span id="envLabel">offline</span></span>
+          <button class="icon-btn" id="refresh" title="Refresh">⟳</button>
+        </div>
+      </header>
+
+      <!-- gate (not connected) -->
+      <section id="gate" class="gate hidden">
+        <div class="panel">
+          <div class="logo" style="margin: 0 auto 12px; width: 42px; height: 42px"></div>
+          <h2>Console offline</h2>
+          <p id="gateMsg"></p>
+          <div class="actions">
+            <button class="btn btn-primary" id="connect">⟁ Connect Alpaca</button>
+            <button class="btn btn-ghost btn-sm" id="openSetup">API Setup</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- loading -->
+      <section id="loading" class="loading"><div class="loader"></div></section>
+
+      <!-- main app -->
+      <main id="main" class="hidden">
+        <div class="views">
+          <!-- HOME -->
+          <section class="view active" id="view-home">
+            <div class="panel hero">
+              <div class="h-label">Portfolio Value</div>
+              <div class="h-val" id="hPortfolio">—</div>
+              <div class="h-today"><span class="muted" style="font-size:11px">Today</span> <span id="hToday">—</span></div>
+            </div>
+            <div class="stats">
+              <div class="stat"><div class="s-label">Unrealized P&L</div><div class="s-val" id="sUnreal">—</div></div>
+              <div class="stat"><div class="s-label">Buying Power</div><div class="s-val" id="sBuying">—</div></div>
+              <div class="stat"><div class="s-label">Cash</div><div class="s-val" id="sCash">—</div></div>
+              <div class="stat"><div class="s-label">Open Positions</div><div class="s-val" id="sPosCount">—</div></div>
+            </div>
+            <div class="panel">
+              <div class="panel-title">
+                <span>Live Balance <span class="live-dot" title="auto-updating"></span></span>
+                <div class="range" id="range">
+                  <button data-p="1D">1D</button>
+                  <button data-p="1W">1W</button>
+                  <button data-p="1M" class="active">1M</button>
+                  <button data-p="3M">3M</button>
+                  <button data-p="1Y">1Y</button>
+                </div>
+              </div>
+              <div class="chart-head">
+                <span id="chartValue">—</span>
+                <span id="chartChange">—</span>
+              </div>
+              <div class="chart-wrap"><canvas id="chart"></canvas></div>
+            </div>
+          </section>
+
+          <!-- MARKETS -->
+          <section class="view" id="view-markets">
+            <div class="panel">
+              <div class="mkt-search">
+                <input id="mSymbol" placeholder="AAPL  ·  BTC/USD" autocomplete="off" spellcheck="false" />
+                <button class="btn btn-sm" id="mGo">Go</button>
+              </div>
+              <div class="mkt-chips" id="mChips"></div>
+            </div>
+            <div class="panel" id="mktQuotePanel" style="display: none">
+              <div class="mkt-quote">
+                <div>
+                  <div class="mq-sym" id="mqSym">—</div>
+                  <div class="mq-price" id="mqPrice">—</div>
+                  <div class="mq-change" id="mqChange">—</div>
+                </div>
+                <div class="mq-stats" id="mqStats"></div>
+              </div>
+              <div class="panel-title" style="margin: 14px 0 8px">
+                <span>Live Price <span class="live-dot"></span></span>
+                <div class="range" id="mktRange">
+                  <button data-p="1D" class="active">1D</button>
+                  <button data-p="1W">1W</button>
+                  <button data-p="1M">1M</button>
+                  <button data-p="3M">3M</button>
+                  <button data-p="1Y">1Y</button>
+                </div>
+              </div>
+              <div class="chart-wrap"><canvas id="mktChart"></canvas></div>
+            </div>
+            <div class="empty" id="mktEmpty">Search a symbol to see its live chart.</div>
+          </section>
+
+          <!-- POSITIONS -->
+          <section class="view" id="view-positions">
+            <div class="panel">
+              <div class="panel-title">Positions <span class="muted" id="posCount"></span></div>
+              <table class="grid-table">
+                <thead>
+                  <tr><th>Sym</th><th class="r">Qty</th><th class="r">Avg</th><th class="r">Last</th><th class="r">P&L</th><th class="r">%</th></tr>
+                </thead>
+                <tbody id="posBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- ORDERS -->
+          <section class="view" id="view-orders">
+            <div class="ai-strip" id="aiStrip"></div>
+            <div class="filters" id="filters">
+              <button data-f="all" class="active">All</button>
+              <button data-f="ai">🤖 AI</button>
+              <button data-f="manual">✋ Manual</button>
+            </div>
+            <div class="panel" style="padding: 6px 12px">
+              <div class="timeline" id="timeline"></div>
+            </div>
+          </section>
+
+          <!-- TRADE -->
+          <section class="view" id="view-trade">
+            <div class="panel ticket">
+              <div class="panel-title">Order Ticket</div>
+              <div class="field">
+                <label>Symbol</label>
+                <input id="oSymbol" placeholder="AAPL" autocomplete="off" />
+              </div>
+              <div class="two">
+                <div class="field">
+                  <label>Quantity</label>
+                  <input id="oQty" type="number" min="0" step="any" placeholder="1" />
+                </div>
+                <div class="field">
+                  <label>Type</label>
+                  <select id="oType">
+                    <option value="market">Market</option>
+                    <option value="limit">Limit</option>
+                  </select>
+                </div>
+              </div>
+              <div class="two">
+                <div class="field" id="limitField" style="display: none">
+                  <label>Limit Price</label>
+                  <input id="oLimit" type="number" min="0" step="any" placeholder="0.00" />
+                </div>
+                <div class="field">
+                  <label>Time in Force</label>
+                  <select id="oTif">
+                    <option value="day">Day</option>
+                    <option value="gtc">GTC</option>
+                  </select>
+                </div>
+              </div>
+              <div class="side-buttons">
+                <button class="sticker sticker-buy" id="buy"><div><span>▲ Buy</span></div></button>
+                <button class="sticker sticker-sell" id="sell"><div><span>▼ Sell</span></div></button>
+              </div>
+              <div class="ticket-note muted">Stamped <code class="mono">manual-…</code> → tagged Manual in Orders.</div>
+            </div>
+          </section>
+        </div>
+
+        <!-- bottom tabs -->
+        <nav class="tabs" id="tabs">
+          <button class="tab-btn active" data-v="home"><div><span><span class="ico">◎</span>Home</span></div></button>
+          <button class="tab-btn" data-v="markets"><div><span><span class="ico">∿</span>Markets</span></div></button>
+          <button class="tab-btn" data-v="positions"><div><span><span class="ico">▤</span>Positions</span></div></button>
+          <button class="tab-btn" data-v="orders"><div><span><span class="ico">⇅</span>Orders</span></div></button>
+          <button class="tab-btn" data-v="trade"><div><span><span class="ico">⊕</span>Trade</span></div></button>
+        </nav>
+      </main>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
