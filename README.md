@@ -1,176 +1,200 @@
-# Alcala Trading Console
+# VOLARB - AI Volatility Arbitrage on Live Crypto Options
 
-A Chrome extension (Manifest V3, vanilla JS — no build step) that connects to an
-**Alpaca** paper-trading account with an API key + secret. Everything lives in a single
-tabbed **popup** — tap the bottom tabs to move between views, no separate page to open:
+> Detecting options mispricings in real time by fusing **Black-Scholes** with a **streaming machine-learning** volatility forecaster on live Bitcoin options.
 
-- **Home** — portfolio value, today's P&L, unrealized P&L, buying power, cash, and a live
-  **equity curve** (1D / 1W / 1M / 3M / 1Y).
-- **Positions** — your open positions with P&L.
-- **Orders** — a **timeline** that tags each order 🤖 **AI** or ✋ **Manual**, with AI stats and filters.
-- **Trade** — a manual order ticket (market/limit, buy/sell) that posts straight to your account.
+**Live Deribit market data · simulated (paper) execution · no real orders are ever placed.**
 
-> Built for the IFX hackathon. "Paper" by default, with a Live toggle included.
+Built for **iFX Hack 2026**.
 
 ---
 
-## Multiple accounts & brokers
+## What it is
 
-The top-left badge in the popup is an **account switcher** (Uiverse-style dropdown). It
-lists every connected account; pick one to make it active and the whole console re-streams
-that account. Two brokers are supported:
+VOLARB is a real-time engine that watches live Bitcoin options, works out the volatility the market is implying for each one, uses a machine-learning model to forecast where that volatility is heading, prices every option with Black-Scholes, and flags the gaps the mispricings.
 
-- **Alpaca** — direct cloud REST (API key + secret).
-- **Interactive Brokers** — *live* via your **Trader Workstation (TWS)** + a small local
-  bridge (`ib_bridge.py`). TWS pulls real data from IBKR; the bridge just translates it.
+It ships with a polished live dashboard and a 7-day backtest, and it includes an **illustrative** delta-hedging layer so you can see how a detected mispricing would be traded.
 
-The service worker routes each request to the active account's **broker adapter** and
-normalizes everything to Alpaca's response shape, so the popup is broker-agnostic.
-
-## Architecture
-
-```
-manifest.json          MV3 manifest (storage + alpaca + localhost host permissions)
-background.js           Service worker: accounts registry + per-broker routing/auth gateway.
-                        Alpaca → cloud REST; IBKR → local ib_bridge.py. The popup posts
-                        normalized messages and never sees credentials.
-ib_bridge.py            Local TWS↔extension bridge: ib_insync → Alpaca-shaped JSON (port 8788)
-engine.py               (standalone) Deribit BTC-options vol-arb signal engine
-src/
-  theme.css             Neo-brutalist "sticker" design system (stone + yellow, hard shadows)
-  shared.js             Messaging client + formatting + AI/manual tagging logic
-  setup.html / .js      Accounts manager (Alpaca creds + IBKR bridge URL) — the options page
-  popup.html/.css/.js   The whole console — switcher + tabs: Home, Markets, Positions, Orders, Trade
-icons/                  Generated gradient icons (16/48/128)
-```
-
-Alpaca auth uses its header scheme (`APCA-API-KEY-ID` / `APCA-API-SECRET-KEY`); IBKR auth is
-held by TWS itself. Credentials live only in `chrome.storage.local`.
+**The core goal is detection** identifying volatility mispricings on live data. The hedging/P&L layer exists to make the concept tangible, **not** to present a guaranteed money-maker. We're explicit about that throughout.
 
 ---
 
-## Setup (one time)
+## How it works
 
-### 1. Get your Alpaca API keys
-1. Sign in at [app.alpaca.markets](https://app.alpaca.markets).
-2. For paper trading, switch to the **Paper** account (top-left toggle).
-3. In the **Home** panel on the right, open **API Keys → Generate / View** and copy the
-   **Key ID** and **Secret Key** (the secret is shown only once — regenerate if you lose it).
+```
+Live Deribit data  ->  Back out market IV  ->  ML forecasts volatility  ->  Black-Scholes fair value  ->  Flag the mispricing
+```
 
-> Paper keys start with `PK…` and only work with the **Paper** environment; live keys
-> start with `AK…` and only work with **Live**. A mismatch returns 403.
+1. **Connect** to Deribit's public production WebSocket (real live BTC options + spot).
+2. **Back out** each option's implied volatility from its live price (bisection).
+3. **Forecast** near-future volatility with a streaming **Ridge** model that trains live on the market and grades itself against a naive baseline.
+4. **Price** the option with Black-Scholes using the forecast volatility -> a theoretical fair value.
+5. **Flag** the gap between market price and fair value - the detected mispricing.
+6. **Illustrate** how it would be traded: buy the cheap option, short BTC to stay delta-neutral, and rebalance the hedge as the market moves.
 
-### 2. Load the extension in Chrome
-1. Open `chrome://extensions`, toggle **Developer mode** (top right).
-2. Click **Load unpacked** and select this folder (`ifx_hackathon`). Pin it for convenience.
+---
 
-### 3. Enter credentials & connect
-1. Click the extension icon → open the **account switcher** (top-left badge) → **Manage accounts**
-   (or right-click the icon → **Options**).
-2. Under **Alpaca**, paste your **Key ID** and **Secret Key**, choose **Paper**/**Live**, set the
-   **AI tag prefix** (default `ai`), and **Save accounts**.
-3. Back in the popup, hit **Connect** (it calls `/v2/account` to verify), then use the tabs —
-   **Home · Markets · Positions · Orders · Trade**.
+## Features
 
-### 4. (Optional) Add Interactive Brokers — live via TWS
-1. In **TWS → Global Configuration → API → Settings**: enable **"ActiveX and Socket Clients"**,
-   set the socket port to `7497` (paper) / `7496` (live), add `127.0.0.1` to **Trusted IPs**, and
-   **uncheck "Read-Only API"** if you want to place orders. Keep TWS logged in.
-2. Run the bridge:
-   ```bash
-   pip install ib_insync aiohttp
-   python ib_bridge.py        # serves http://127.0.0.1:8788
-   ```
-   (Use `IB_PORT=7496` for live.)
-3. In the popup's **account switcher → IBKR · TWS → Connect**. The bridge translates TWS data
-   into the same shape the console already speaks, so every tab just works.
+- **Real live data** — connects to Deribit's production WebSocket; nothing simulated on the data side.
+- **Real quant math** — Black-Scholes pricing, implied-volatility back-solving, and the Greeks (Delta, Vega).
+- **Genuine streaming ML** — a `Ridge` model that retrains on live data and reports its accuracy against a no-change baseline.
+- **Self-serving dashboard** — the engine runs its own web server; just open a browser. No extra setup.
+- **Illustrative paper-trading layer** — delta-hedged, market-neutral, frictionless by default (fees modelled and toggleable).
+- **7-day backtest** — replays the full engine over a week of real historical data.
+- **Chrome extension front-end** — a multi-account trading console (Alpaca, IBKR via TWS, and the VOLARB sim) with a live balance curve, order timeline, and the same VOLARB desk streamed live.
 
-> The IBKR equity curve is a 2-point placeholder (TWS exposes no native equity history) and the
-> bridge handles US stocks; everything else (account, positions, orders, quotes, trading) is live.
+---
 
-### 5. (Optional) Add Deribit — simulated AI options trading on live data
-The `Deribit · Sim` account runs the BTC-options volatility-arbitrage **engine**
-(`engine/Hackathon-NSM-FY26/engine.py`): it streams **real live Deribit prices**, finds
-mispriced options, and **paper-trades** them delta-neutral with fee-aware P&L. No keys, no
-real orders. The extension shows the simulated balance, the engine's positions, its trades
-(tagged 🤖 AI in the timeline), and a live P&L curve.
+## Tech stack
+
+Python · `scikit-learn` (Ridge) · `scipy` / `numpy` (Black-Scholes, IV) · `websockets` (live feed) · `requests` (REST / history) · built-in `http.server` (dashboard) · vanilla HTML + Chart.js (front end).
+
+---
+
+## Installation
+
+```bash
+pip install -r engine/Hackathon-NSM-FY26/requirements.txt
+```
+
+`requirements.txt`:
+
+```
+numpy
+scipy
+scikit-learn
+websockets
+requests
+```
+
+The dashboard needs no extra setup — the engine serves it.
+
+---
+
+## Usage
+
+### 1. Run the live engine + dashboard
+
+```bash
+python engine/Hackathon-NSM-FY26/engine.py
+```
+
+Then open **http://localhost:8765** in a browser.
+
+- The **terminal** streams `[TICK]` / `[ARB]` lines — proof it's processing real data live.
+- The **browser** shows the polished dashboard for presentation.
+
+> If it can't connect to Deribit, the venue/network may block the WebSocket — switch to a phone hotspot and test early.
+
+### 2. Run the 7-day backtest
+
+```bash
+python engine/Hackathon-NSM-FY26/backtest.py
+```
+
+Replays the engine over a week of real Deribit history and writes **`engine/Hackathon-NSM-FY26/backtest_result.html`** (open it in a browser). Resolution and window are configurable at the top of the file (`RESOLUTION`, `DAYS`).
+
+Running the backtesting is not necessary as the results are already included in "bactest_result.html", which is generated by the backtesting script. Please keep in mind that for viewing the precomputed "backtest_results.html" you should first download it on your computer.
+
+### 3. (Optional) Run the Chrome extension + VOLARB sim account
 
 ```bash
 pip install -r engine/Hackathon-NSM-FY26/requirements.txt aiohttp
-python deribit_bridge.py        # serves http://127.0.0.1:8789
+python deribit_bridge.py          # serves the VOLARB sim account + live desk on http://127.0.0.1:8789
 ```
-Then in the popup's **account switcher → Deribit · Sim → Connect**. Give the engine a few
-seconds to connect to Deribit and start finding trades.
 
-The same bridge also serves a **live VOLARB desk** at **http://127.0.0.1:8789/** — the
-`backtest_result.html` graphs (market-ask vs AI fair value, live P&L curve, BTC spot) but
-streaming in real time, styled to match the extension. It reads the engine's raw state from
-`/state`.
+Load the extension via `chrome://extensions` -> **Load unpacked** -> this folder, then open the account switcher and connect **VOLARB**. The live VOLARB desk is also at **http://127.0.0.1:8789/**.
 
-> Use the **same Python** you installed the deps into. The bridge runs the engine in-process
-> and translates its `state` into the same Alpaca-shaped JSON the console already speaks.
+## What's on the dashboard
+
+- **BTC spot** + live connection status
+- **Arbitrage P&L** — real, marked to the market mid, frictionless
+- **BTC Hedged** — the actual (non-zero) short position; **Net Delta** ~ 0 confirms market-neutrality
+- **Net Vega** — volatility exposure
+- **Model accuracy** — our forecast error (MAE) vs a naive no-change baseline
+- **Market ask vs theoretical price** — the gap is the detected mispricing
+- **Live signal feed** + **open positions**
 
 ---
 
-## How AI vs Manual tagging works
+## The illustrative hedging layer (how to describe it honestly)
 
-Alpaca doesn't store "was this order from an AI?", so the console uses the order's
-**`client_order_id`** as the signal:
+When the engine flags an option as cheap, the paper layer:
 
-- An order is shown as **🤖 AI** when its `client_order_id` starts with your configured
-  prefix, e.g. `ai-...` / `ai_...` (default prefix `ai`).
-- Manual orders placed from this extension's ticket are stamped `manual-...` and shown as **✋ Manual**.
-- Anything else falls back to Manual.
+1. **Buys** the option (simulated, entered at the mid price).
+2. **Shorts** the right amount of BTC (= the option's Delta) to go market-neutral.
+3. **Rebalances** that hedge continuously as BTC moves — harvesting the movement.
+4. Tracks a **real, mark-to-mid P&L**.
 
-**So make your AI model set `client_order_id` accordingly when it places orders.** Example:
+By default this runs **frictionless** (zero fees, mid-price marking) to isolate the pure concept. Fees are fully modelled in the code (`FEE_RATE`) and can be switched on with one parameter — in reality, fees and spread are the main constraint.
 
-```python
-# alpaca-py
-from alpaca.trading.requests import MarketOrderRequest
-from alpaca.trading.enums import OrderSide, TimeInForce
-
-trading_client.submit_order(MarketOrderRequest(
-    symbol="AAPL",
-    qty=10,
-    side=OrderSide.BUY,
-    time_in_force=TimeInForce.DAY,
-    client_order_id=f"ai-{uuid4().hex[:8]}",   # <-- tags it as AI in the console
-))
-```
-
-```bash
-# raw REST
-curl -X POST https://paper-api.alpaca.markets/v2/orders \
-  -H "APCA-API-KEY-ID: $KEY" -H "APCA-API-SECRET-KEY: $SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"symbol":"AAPL","qty":10,"side":"buy","type":"market","time_in_force":"day","client_order_id":"ai-7f3c1a2b"}'
-```
-
-If you'd rather use a different prefix (e.g. `bot`), set it in the setup page.
+**It is simulated execution on real prices — paper trading, the way a desk validates a strategy before risking capital. No real orders are placed.**
 
 ---
 
-## Alpaca endpoints used
+## Results — 7-day backtest (1-minute resolution)
 
-| Purpose | Call |
+Replayed over a full week of real Deribit data:
+
+| Metric | Value |
 |---|---|
-| Verify credentials / KPIs | `GET /v2/account` |
-| Positions | `GET /v2/positions` |
-| Order history (timeline) | `GET /v2/orders?status=all&direction=desc&nested=true` |
-| Equity curve | `GET /v2/account/portfolio/history` |
-| Place order | `POST /v2/orders` |
+| Hedged P&L (illustrative, frictionless) | **+$367** |
+| In profit | **~91% of the week** (peak ~ +$1.9k) |
+| Market-neutral | Net Delta ~ 0.008 |
+| Hedge rebalances | 1,454 |
+| Forecast MAE vs baseline | 0.034 vs 0.032 |
 
-Base URL is `https://paper-api.alpaca.markets` (paper) or `https://api.alpaca.markets` (live),
-selected in setup. Every call sends the `APCA-API-KEY-ID` / `APCA-API-SECRET-KEY` headers.
+**Honest reading:** the strategy was profitable and market-neutral across a real week — but at a **1-minute horizon the forecast roughly matches the naive baseline**, because volatility barely moves minute-to-minute (the baseline is near-optimal at short horizons). The result is a **feasibility replay on real data, not a profit guarantee.** Our live engine runs far finer than any backtest, so we treat these as illustrations of the concept, not precise accuracy verdicts.
 
 ---
 
-## Notes & limits
+## What it is — and isn't
 
-- **Hackathon-grade auth.** The secret lives in the extension's local storage — fine for a
-  personal paper account / demo. For a published extension you'd proxy calls through a
-  backend so the secret never reaches the client.
-- **"Disconnect"** clears the verified flag (so the next Connect re-checks the keys); your
-  saved keys stay in setup until you change them.
-- No external scripts/CDNs — the equity chart is drawn on a `<canvas>`, so it complies with
-  the MV3 content-security policy out of the box.
+- **Not "true" arbitrage.** True arbitrage is riskless; ours depends on a *prediction* (our volatility forecast). Precisely, it's **statistical / volatility arbitrage** — a relative-value strategy.
+- **Detection, not a money machine.** The engine's job is to identify mispricings on live data. Turning that into reliable profit requires beating the market's volatility forecast and surviving transaction costs — the genuinely hard part.
+- **Frictionless view by design.** The default dashboard / backtest strip out fees and spread to show the concept cleanly; fees are modelled and one toggle away.
+
+---
+
+## Roadmap
+
+- **Sharper forecaster** — a GARCH model, purpose-built for volatility clustering.
+- **Transaction-cost modelling** — fees, spread, and slippage in the live P&L.
+- **Optimal hedge frequency** — the fee-vs-tracking trade-off as a tunable parameter.
+- **Forecast horizon study** — pinning down where the model genuinely beats the baseline.
+
+---
+
+## Repository structure
+
+```
+manifest.json              # Chrome extension (Manifest V3)
+background.js              # service worker: multi-account broker routing
+src/                       # popup console, options page, theme, helpers
+icons/                     # extension icons
+ib_bridge.py               # IBKR (TWS) -> Alpaca-shaped JSON bridge
+deribit_bridge.py          # VOLARB engine -> Alpaca-shaped JSON bridge + live desk
+engine_live.html           # live VOLARB dashboard (served by deribit_bridge.py)
+engine/Hackathon-NSM-FY26/
+  engine.py                # live engine: data, IV, ML, Black-Scholes, hedging, web server
+  dashboard.html           # self-contained live dashboard (served by engine.py)
+  backtest.py              # 7-day historical replay -> backtest_result.html
+  requirements.txt
+  README.md
+```
+
+---
+
+## Anticipated questions
+
+- **Is it real or a sandbox?** Real live Deribit data; execution is simulated (paper).
+- **Would it make money?** Not as a weekend build — the edge (beating the market's vol forecast) is unproven and fees are a real drag. It's the detection front-end of a real strategy.
+- **Why not deep learning?** Complex models overfit on crypto's limited data; a simple, regularized model plus good features is the documented right call. GARCH is the next step.
+- **Is your accuracy real?** We measure against a naive no-change baseline. Short-horizon IV is highly persistent, so beating the baseline is genuinely hard — we report it honestly rather than overclaiming.
+- **Why only buy signals?** Selling options carries unbounded risk and needs margin modelling; we deliberately scoped to the bounded-risk long side.
+
+---
+
+## Disclaimer
+
+This project is for research, education, and demonstration. It is **not** financial advice and is **not** connected to any live trading account. No real orders are placed. Markets are risky; do your own research.
