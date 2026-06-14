@@ -253,6 +253,7 @@ class EngineState:
         self.focus_hist = deque(maxlen=240)       # (t, market, theo) for focus contract
         self.focus_instr = None
         self.pnl_hist = deque(maxlen=240)         # (t, total_pnl, fees)
+        self.tick_log = deque(maxlen=400)         # per-tick console output, for the live UI
         self.model_mae = None
         self.baseline_mae = None
         self.portfolio = {}
@@ -268,6 +269,7 @@ class EngineState:
                 "spot_hist": list(self.spot_hist),
                 "focus_hist": list(self.focus_hist),
                 "pnl_hist": list(self.pnl_hist),
+                "tick_log": list(self.tick_log),
                 "portfolio": self.portfolio,
             })
 
@@ -372,14 +374,19 @@ class ArbitrageEngine:
         self.portfolio.update(snap, self.spot)
         summ = self.portfolio.summary(self.state.contracts, self.spot)
 
+        tag = "ARB" if is_arb else "TICK"
         with self.state.lock:
             self.state.portfolio = summ
             self.state.pnl_hist.append((time.time(), summ["total_pnl"]))
             if is_arb:
                 self.state.opportunities.appendleft({**snap, "t": time.strftime("%H:%M:%S")})
+            self.state.tick_log.append({
+                "t": time.strftime("%H:%M:%S"), "tag": tag, "instr": instr,
+                "ask": ask_usd, "theo": theo, "mkt_iv": mkt_iv, "pred_iv": pred_iv,
+                "pnl": summ["total_pnl"], "hedged": summ["gross_hedge"],
+            })
 
         if self.verbose:
-            tag = "ARB " if is_arb else "TICK"
             print(f"[{tag}] {instr} ask=${ask_usd:.2f} theo=${theo:.2f} "
                   f"mktIV={mkt_iv:.2f} aiIV={pred_iv:.2f} "
                   f"PnL=${summ['total_pnl']:.2f} hedged={summ['gross_hedge']:.2f}BTC")
