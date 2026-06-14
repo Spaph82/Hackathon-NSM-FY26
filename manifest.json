@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Alcala Trading Console",
+  "version": "1.0.0",
+  "description": "Futuristic console for an Alpaca paper-trading account: API-key login, live portfolio, AI/manual order timeline, and P&L.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://api.alpaca.markets/*",
+    "https://paper-api.alpaca.markets/*",
+    "https://data.alpaca.markets/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+  "action": {
+    "default_title": "Alcala Trading Console",
+    "default_popup": "src/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "options_page": "src/setup.html",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}
